@@ -4,13 +4,16 @@ export class UserRegistrationRequestDto {
   role:string;
   name: string;
 
-  constructor(data: any) {
-    if (!data.email || !data.password || !data.name) {
+  constructor(dto: any) {
+ 
+    
+    
+    if (!dto.data.email || !dto.data.password || !dto.data.name) {
       throw new Error("Missing required fields");
     }
-    this.email = data.email;
-    this.password = data.password;
+    this.email = dto.data.email;
+    this.password = dto.data.password;
     this.role="user";
-    this.name = data.name;
+    this.name = dto.data.name;
   }
 }
