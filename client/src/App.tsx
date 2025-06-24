@@ -1,11 +1,15 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
+import UserRoute from './routes/UserRoute'
 
 function App() {
 
   return (
-    <>
-     app
-    </>
+   <BrowserRouter>
+   <Routes>
+     <Route path='/*' element={<UserRoute/>}/>
+   </Routes>
+   </BrowserRouter>
   )
 }
 
