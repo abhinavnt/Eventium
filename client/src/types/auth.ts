@@ -46,3 +46,18 @@ export class OrganizerRegistrationRequestDto {
 }
 
 export type UserType = "user" | "organizer";
+
+export interface SignupFormData {
+  email: string;
+  password: string;
+  name: string;
+  organizationName?: string;
+  phone?: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+}
+
+export interface SignupFormErrors {
+  [key: string]: string | undefined;
+}

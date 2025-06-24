@@ -16,7 +16,8 @@ export class AuthController implements IAuthController {
   register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { role } = req.query;
     let dto: OrganizerRegistrationRequestDto | UserRegistrationRequestDto;
-
+     console.log(req.body,"body from the controller");
+     
     if (role === "organizer") {
       dto = new OrganizerRegistrationRequestDto(req.body);
     } else if (role === "user") {

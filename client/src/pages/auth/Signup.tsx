@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Sparkles, Users, Zap, Trophy } from 'lucide-react';
 import SignupForm from '@/components/auth/SignupForm';
-import { useAuthGuard } from '@/hooks/useAuthGuard';
+// import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 const Signup = () => {
-    useAuthGuard();
+    // useAuthGuard();
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background Elements */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, Building, Phone, MapPin, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,23 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { OrganizerRegistrationRequestDto, UserRegistrationRequestDto, type UserType } from '@/types/auth';
+import { OrganizerRegistrationRequestDto, UserRegistrationRequestDto, type SignupFormData, type SignupFormErrors, type UserType } from '@/types/auth';
 import { validateEmail, validatePassword, validatePhone, validatePincode, validateRequired } from '@/utils/form-validation';
+import { registerUser } from '@/services/authService';
 
-interface SignupFormData {
-  email: string;
-  password: string;
-  name: string;
-  organizationName?: string;
-  phone?: string;
-  state?: string;
-  city?: string;
-  pincode?: string;
-}
 
-interface SignupFormErrors {
-  [key: string]: string | undefined;
-}
 
 const SignupForm = () => {
   const navigate = useNavigate();
@@ -40,10 +28,23 @@ const SignupForm = () => {
   const [errors, setErrors] = useState<SignupFormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Only set the timer if there’s a message
+    if (apiError) {
+      const timer = setTimeout(() => {
+        setApiError(null); // Clear the message after 5 seconds
+      }, 5000);
+
+      // Cleanup function to clear the timer if the message changes or component unmounts
+      return () => clearTimeout(timer);
+    }
+  }, [apiError]);
 
   const handleInputChange = (field: keyof SignupFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -57,20 +58,20 @@ const SignupForm = () => {
 
   const validateForm = (): boolean => {
     const newErrors: SignupFormErrors = {};
-    
+
     const emailError = validateEmail(formData.email);
     if (emailError) newErrors.email = emailError;
-    
+
     const passwordError = validatePassword(formData.password);
     if (passwordError) newErrors.password = passwordError;
-    
+
     const nameError = validateRequired(formData.name, 'Name');
     if (nameError) newErrors.name = nameError;
-    
+
     if (userType === 'organizer') {
       const orgNameError = validateRequired(formData.organizationName || '', 'Organization Name');
       if (orgNameError) newErrors.organizationName = orgNameError;
-      
+
       const phoneError = validateRequired(formData.phone || '', 'Phone');
       if (!phoneError) {
         const phoneFormatError = validatePhone(formData.phone || '');
@@ -78,13 +79,13 @@ const SignupForm = () => {
       } else {
         newErrors.phone = phoneError;
       }
-      
+
       const stateError = validateRequired(formData.state || '', 'State');
       if (stateError) newErrors.state = stateError;
-      
+
       const cityError = validateRequired(formData.city || '', 'City');
       if (cityError) newErrors.city = cityError;
-      
+
       const pincodeError = validateRequired(formData.pincode || '', 'Pincode');
       if (!pincodeError) {
         const pincodeFormatError = validatePincode(formData.pincode || '');
@@ -93,38 +94,53 @@ const SignupForm = () => {
         newErrors.pincode = pincodeError;
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("handle submit");
+
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       let dto;
+      console.log("going to dto", formData);
+
       if (userType === 'user') {
+        console.log("going to user dto", formData);
         dto = new UserRegistrationRequestDto(formData);
+        console.log(dto, "dto result");
+
       } else {
         dto = new OrganizerRegistrationRequestDto(formData);
       }
-      
+
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Signup attempt:', dto);
-      console.log('Query param: ?role=' + userType);
-      
+      const response = await registerUser(dto)
+
+      if (response?.status == 201) {
+        navigate('/otp-verification', {
+          state: {
+            email: formData.email,
+            userType: userType
+          }
+        });
+      }
       // Navigate to OTP verification page with email
-      navigate('/otp-verification', { 
-        state: { 
-          email: formData.email,
-          userType: userType
-        } 
-      });
+      console.log(response,"rspon");
+
+      if(response==undefined){
+
+        setApiError("something went wrong please try later")
+      }
+      
+      setApiError(response.data.message)
     } catch (error) {
       console.error('Signup failed:', error);
     } finally {
@@ -159,13 +175,13 @@ const SignupForm = () => {
               User
             </span>
           </div>
-          
+
           <Switch
             checked={userType === 'organizer'}
             onCheckedChange={handleUserTypeChange}
             className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-600 data-[state=checked]:to-purple-600"
           />
-          
+
           <div className="flex items-center space-x-3">
             <Building className={`h-5 w-5 transition-colors ${userType === 'organizer' ? 'text-violet-400' : 'text-gray-500'}`} />
             <span className={`font-medium transition-colors ${userType === 'organizer' ? 'text-violet-400' : 'text-gray-400'}`}>
@@ -174,6 +190,18 @@ const SignupForm = () => {
           </div>
         </div>
       </motion.div>
+
+      {apiError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-full mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-sm text-center"
+        >
+          <p className="text-red-400 text-sm">{apiError}</p>
+        </motion.div>
+      )}
+
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Name Field */}
@@ -193,9 +221,8 @@ const SignupForm = () => {
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                errors.name ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-              }`}
+              className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.name ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                }`}
               placeholder="Enter your full name"
             />
             <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -229,9 +256,8 @@ const SignupForm = () => {
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                errors.email ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-              }`}
+              className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.email ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                }`}
               placeholder="Enter your email address"
             />
             <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -265,9 +291,8 @@ const SignupForm = () => {
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
-              className={`pr-12 bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                errors.password ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-              }`}
+              className={`pr-12 bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.password ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                }`}
               placeholder="Create a strong password"
             />
             <button
@@ -320,9 +345,8 @@ const SignupForm = () => {
                     type="text"
                     value={formData.organizationName}
                     onChange={(e) => handleInputChange('organizationName', e.target.value)}
-                    className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                      errors.organizationName ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-                    }`}
+                    className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.organizationName ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                      }`}
                     placeholder="Enter organization name"
                   />
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -351,9 +375,8 @@ const SignupForm = () => {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                      errors.phone ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-                    }`}
+                    className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.phone ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                      }`}
                     placeholder="Enter phone number"
                   />
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -383,9 +406,8 @@ const SignupForm = () => {
                       type="text"
                       value={formData.state}
                       onChange={(e) => handleInputChange('state', e.target.value)}
-                      className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                        errors.state ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-                      }`}
+                      className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.state ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                        }`}
                       placeholder="State"
                     />
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -412,9 +434,8 @@ const SignupForm = () => {
                       type="text"
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
-                      className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                        errors.city ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-                      }`}
+                      className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.city ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                        }`}
                       placeholder="City"
                     />
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -443,9 +464,8 @@ const SignupForm = () => {
                     type="text"
                     value={formData.pincode}
                     onChange={(e) => handleInputChange('pincode', e.target.value)}
-                    className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${
-                      errors.pincode ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
-                    }`}
+                    className={`bg-gray-800/60 backdrop-blur-sm border-gray-700/50 text-white placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 transition-all duration-300 ${errors.pincode ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+                      }`}
                     placeholder="Enter pincode"
                   />
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-violet-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
