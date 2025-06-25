@@ -5,6 +5,8 @@ import { Sparkles, ArrowLeft, Mail, Timer, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { useAuthGuard } from "@/hooks/useAuthGuard"
+import { resendOtp, verifyOtp } from "@/services/authService"
+import { useDispatch } from "react-redux"
 
 const OtpVerification = () => {
     // useAuthGuard()
@@ -16,8 +18,23 @@ const OtpVerification = () => {
     const [canResend, setCanResend] = useState(false)
     const navigate = useNavigate()
     const location = useLocation()
+    const [apiError, setApiError] = useState<string | null>(null);
 
     const email = location.state?.email || "your email"
+
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        // Only set the timer if there’s a message
+        if (apiError) {
+            const timer = setTimeout(() => {
+                setApiError(null); // Clear the message after 5 seconds
+            }, 5000);
+
+            // Cleanup function to clear the timer if the message changes or component unmounts
+            return () => clearTimeout(timer);
+        }
+    }, [apiError]);
 
     // Timer functionality with localStorage persistence
     useEffect(() => {
@@ -73,10 +90,22 @@ const OtpVerification = () => {
         setIsLoading(true)
         try {
             // Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 1500))
-            console.log("OTP verification:", { otp, email })
-            // Navigate to dashboard or login on success
-            navigate("/login")
+            const response = await verifyOtp(email, otp, dispatch)
+            console.log(response, "response after otp submiter");
+            if (response.status == 200) {
+
+                navigate("/")
+            }
+
+            if (response == undefined) {
+                setApiError("somthing went wrong please try later")
+                return
+            }
+
+            setApiError(response?.data.message)
+
+            return
+
         } catch (error) {
             setError("Invalid OTP. Please try again.")
         } finally {
@@ -90,17 +119,29 @@ const OtpVerification = () => {
         setIsResending(true)
         try {
             // Simulate resend API call
-            await new Promise((resolve) => setTimeout(resolve, 1000))
-
+            const response = await resendOtp(email)
             // Reset timer
-            const currentTime = Math.floor(Date.now() / 1000)
-            localStorage.setItem("otpTimestamp", currentTime.toString())
-            setTimeLeft(60)
-            setCanResend(false)
-            setOtp("")
-            setError("")
 
-            console.log("OTP resent to:", email)
+            if (response?.status == 200) {
+                const currentTime = Math.floor(Date.now() / 1000)
+                localStorage.setItem("otpTimestamp", currentTime.toString())
+                setTimeLeft(60)
+                setCanResend(false)
+                setOtp("")
+                setError("")
+                return
+            }
+
+
+            if (response == undefined) {
+                setApiError("somthing went wrong please try later")
+                return
+            }
+
+            setApiError(response?.data.message)
+
+            return
+
         } catch (error) {
             setError("Failed to resend OTP. Please try again.")
         } finally {
@@ -149,11 +190,22 @@ const OtpVerification = () => {
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 sm:mb-3">Verify Your Email</h1>
                             <p className="text-gray-400 text-base sm:text-lg leading-relaxed px-2">
-                                We've sent a 6-digit verification code to{" "}
+                                We've sent a 6-digit verification code to{" "} <br />
                                 <span className="text-violet-400 font-medium break-all">{email}</span>
                             </p>
                             <div className="w-12 sm:w-16 h-1 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full mx-auto mt-3 sm:mt-4" />
                         </motion.div>
+
+                        {apiError && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="w-full mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-sm text-center"
+                            >
+                                <p className="text-red-400 text-sm">{apiError}</p>
+                            </motion.div>
+                        )}
 
                         {/* OTP Input */}
                         <motion.div

@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 
 export class UserResponseDto {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -10,7 +10,7 @@ export class UserResponseDto {
   attendedEvents?: Types.ObjectId[];
 
   constructor(data: any) {
-    this._id = data._id;
+    this.id = data.userId;
     this.name = data.name;
     this.email = data.email;
     this.role = data.role;

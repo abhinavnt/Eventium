@@ -12,6 +12,7 @@ import { IUser } from "../model/User";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import { generateToken } from "../utils/tokenService";
+import { HttpError } from "../types/HttpError";
 
 @injectable()
 export class AuthService implements IAuthService {
@@ -20,7 +21,7 @@ export class AuthService implements IAuthService {
   async register(data: OrganizerRegistrationRequestDto | UserRegistrationRequestDto): Promise<void> {
     const existingUser = await this.userRepository.findByEmail(data.email);
     if (existingUser) {
-      throw new Error("Email already exists");
+      throw new HttpError(400,"Email already exists");
     }
 
     // Generate OTP
@@ -52,53 +53,58 @@ export class AuthService implements IAuthService {
 
   async verifyOtp(email: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: UserResponseDto | OrganizerResponseDto }> {
     // Verify OTP
+    console.log("reached service",email,"  ",otp,"  ");
+    
     const otpData = await RedisClient.get(`otp:${email}`);
-    if (!otpData) throw new Error("OTP expired or invalid");
+    if (!otpData) throw new HttpError(400, "OTP expired or invalid");
 
     const { otp: storedOtp } = JSON.parse(otpData);
     if (otp !== storedOtp) throw new Error("Invalid OTP");
 
     // Get user session data
     const userData = await RedisClient.get(`user_session:${email}`);
-    if (!userData) throw new Error("User data not found. Please register again");
+    if (!userData) throw new HttpError(400,"User data not found. Please register again");
 
     const parsedData = JSON.parse(userData);
 
     const userId = uuidv4();
 
+    console.log("reached before the dto");
+    console.log(parsedData);
+    
     let userCreateData: Partial<IUser>;
     if (parsedData.role === "organizer") {
       // Validate organizer data
-      const organizerData = new OrganizerRegistrationRequestDto(parsedData);
+      // const organizerData = new OrganizerRegistrationRequestDto(parsedData);
       userCreateData = {
-        email: organizerData.email,
+        email: parsedData.email,
         password: parsedData.hashedPassword,
-        name: organizerData.name,
+        name: parsedData.name,
         role: "organizer",
         userId,
-        organizationName: organizerData.organizationName,
-        contactInfo: organizerData.contactInfo,
-        isVerified: true,
+        organizationName: parsedData.organizationName,
+        contactInfo: parsedData.contactInfo,
       };
     } else if (parsedData.role === "user") {
       // Validate user data
-      const userData = new UserRegistrationRequestDto(parsedData);
+      // const userData = new UserRegistrationRequestDto(parsedData);
       userCreateData = {
-        email: userData.email,
+        email: parsedData.email,
         password: parsedData.hashedPassword,
-        name: userData.name,
+        name: parsedData.name,
         role: "user",
         userId,
-        isVerified: true,
       };
     } else {
-      throw new Error("Invalid role in session data");
+      throw new HttpError(400,"Invalid role in session data");
     }
 
     // Create user in database
+    console.log("goin for repository");
+    
     const user = await this.userRepository.create(userCreateData);
 
-    if (!user) throw new Error("Cannot create user. Please register again");
+    if (!user) throw new HttpError(500,"Cannot create user. Please register again");
 
     // Generate tokens
 
@@ -123,7 +129,7 @@ export class AuthService implements IAuthService {
 
   async resendOtp(email: string): Promise<void> {
     const user = await RedisClient.get(`user_session:${email}`);
-    if (!user) throw new Error("user session expired please register again");
+    if (!user) throw new HttpError(400,"user session expired please register again");
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -135,12 +141,12 @@ export class AuthService implements IAuthService {
   async login(email: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: UserResponseDto | OrganizerResponseDto }> {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new Error("User not found");
+      throw new HttpError(400,"User not found");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new Error("Invalid password");
+      throw new HttpError(400,"Invalid password");
     }
 
     const accessToken = generateToken({ userId: user.userId, role: user.role }, process.env.ACCESS_TOKEN_SECRET || "secret", "60m");

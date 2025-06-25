@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { validateEmail, validatePassword } from '@/utils/form-validation';
+import { useDispatch } from 'react-redux';
+import { login } from '@/services/authService';
+import { useNavigate } from 'react-router-dom';
 
 
 interface LoginFormData {
@@ -25,6 +28,24 @@ const LoginForm = () => {
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+
+  const [apiError, setApiError] = useState<string | null>(null);
+  
+    useEffect(() => {
+      // Only set the timer if there’s a message
+      if (apiError) {
+        const timer = setTimeout(() => {
+          setApiError(null); // Clear the message after 5 seconds
+        }, 5000);
+  
+        // Cleanup function to clear the timer if the message changes or component unmounts
+        return () => clearTimeout(timer);
+      }
+    }, [apiError]);
+
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const handleInputChange = (field: keyof LoginFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -57,14 +78,25 @@ const LoginForm = () => {
     
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Login attempt:', formData);
-      // Handle successful login here
+     const response= await login(formData.email,formData.password,dispatch)
+
+     if(response.status==200){
+       setIsLoading(false);
+      navigate('/')
+      return
+     }
+
+     if(response==undefined){
+         setApiError("something went wrong please try later")
+         return
+     }
+     setApiError(response.data.message)
+     return
     } catch (error) {
       console.error('Login failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    }finally{
+      setIsLoading(false)
+    } 
   };
 
   return (
@@ -74,6 +106,18 @@ const LoginForm = () => {
       transition={{ duration: 0.6 }}
       className="w-full max-w-md mx-auto"
     >
+
+     {apiError && (
+             <motion.div
+               initial={{ opacity: 0, y: -10 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.3 }}
+               className="w-full mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-sm text-center"
+             >
+               <p className="text-red-400 text-sm">{apiError}</p>
+             </motion.div>
+           )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email Field */}
         <motion.div
