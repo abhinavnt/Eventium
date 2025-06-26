@@ -9,7 +9,7 @@ import { resendOtp, verifyOtp } from "@/services/authService"
 import { useDispatch } from "react-redux"
 
 const OtpVerification = () => {
-    // useAuthGuard()
+    useAuthGuard()
     const [otp, setOtp] = useState("")
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)

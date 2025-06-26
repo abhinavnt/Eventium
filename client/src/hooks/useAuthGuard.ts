@@ -1,28 +1,27 @@
-import { authUtils } from '@/utils/auth';
+import { useAppSelector } from '@/redux/store';
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
+// Adjust the import path based on your store file location
 
 export const useAuthGuard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const isAuthenticatedLocal = localStorage.getItem('isAuthenticated') === 'true';
 
   useEffect(() => {
     const currentPath = location.pathname;
     const isAuthPage = ['/login', '/signup', '/otp-verification'].includes(currentPath);
-    
+
     // Redirect authenticated users away from auth pages
-    if (isAuthPage && authUtils.shouldRedirectFromAuth()) {
+    if (isAuthPage && (isAuthenticated || isAuthenticatedLocal)) {
       navigate('/', { replace: true });
       return;
     }
 
     // Handle OTP page access
-    if (currentPath === '/otp-verification') {
-      const user = authUtils.getUser();
-      if (!user || user.isVerified) {
-        navigate('/login', { replace: true });
-      }
+    if (currentPath === '/otp-verification' && !user) {
+      navigate('/login', { replace: true });
     }
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, isAuthenticated, isAuthenticatedLocal, user]);
 };
