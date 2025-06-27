@@ -2,8 +2,10 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Calendar, Users, Star, ArrowRight } from 'lucide-react';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 const TempHome = () => {
+  useAuthGuard();
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Navigation */}

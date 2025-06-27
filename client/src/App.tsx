@@ -6,6 +6,8 @@ import { useDispatch } from 'react-redux';
 import { refreshToken } from './services/authService';
 import { useAppSelector } from './redux/store';
 import Loading from './components/ui/Loading';
+import OrganizerRoute from './routes/OrganizerRoute';
+import AdminRoute from './routes/AdminRoute';
 
 function App() {
 
@@ -55,6 +57,8 @@ const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
    <BrowserRouter>
    <Routes>
      <Route path='/*' element={<UserRoute/>}/>
+     <Route path='/admin/*' element={<AdminRoute/>}/>
+     <Route path='/organiser/*' element={<OrganizerRoute/>}/>
    </Routes>
    </BrowserRouter>
   )

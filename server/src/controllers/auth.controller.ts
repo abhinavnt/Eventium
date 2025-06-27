@@ -4,8 +4,6 @@ import { IAuthService } from "../core/interfaces/services/IAuthService";
 import { TYPES } from "../di/types";
 import { inject, injectable } from "inversify";
 import { IAuthController } from "../core/interfaces/controllers/IAuthController";
-import { ParamsDictionary } from "express-serve-static-core";
-import { ParsedQs } from "qs";
 import { OrganizerRegistrationRequestDto } from "../dto/request/OrganizerRegistrationRequest";
 import { UserRegistrationRequestDto } from "../dto/request/UserRegistrationRequest";
 

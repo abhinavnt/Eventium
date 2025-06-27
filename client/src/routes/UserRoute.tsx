@@ -1,8 +1,11 @@
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import Login from "@/pages/auth/Login"
 import OtpVerification from "@/pages/auth/OtpVerification"
 import Signup from "@/pages/auth/Signup"
-import EventDetails from "@/pages/EventDetails"
-import Home from "@/pages/Home"
+import Unauthorized from "@/pages/auth/Unauthorized"
+import EventDetails from "@/pages/user/EventDetails"
+import HomePage from "@/pages/user/HomePage"
+import TempHome from "@/pages/TempHome"
 import { Route, Routes } from "react-router-dom"
 
 const UserRoute = () => {
@@ -10,7 +13,9 @@ const UserRoute = () => {
    <Routes>
 
 
-     <Route path="/" element={<Home/>}/>
+     <Route path="/" element={<TempHome/>}/>
+     <Route path="/unauthorized" element={<Unauthorized/>}/>
+     <Route path="/home" element={<ProtectedRoute requiredRole="user"><HomePage/></ProtectedRoute>}/>
      <Route path="/event/:id" element={<EventDetails/>}/>
      <Route path="/signup" element={<Signup/>}/>
      <Route path="/login" element={<Login/>}/>

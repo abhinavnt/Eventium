@@ -11,17 +11,13 @@ export const useAuthGuard = () => {
 
   useEffect(() => {
     const currentPath = location.pathname;
-    const isAuthPage = ['/login', '/signup', '/otp-verification'].includes(currentPath);
+    const isAuthPage = ['/login', '/signup', '/otp-verification','/'].includes(currentPath);
 
     // Redirect authenticated users away from auth pages
     if (isAuthPage && (isAuthenticated || isAuthenticatedLocal)) {
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
       return;
     }
 
-    // Handle OTP page access
-    if (currentPath === '/otp-verification' && !user) {
-      navigate('/login', { replace: true });
-    }
   }, [navigate, location.pathname, isAuthenticated, isAuthenticatedLocal, user]);
 };

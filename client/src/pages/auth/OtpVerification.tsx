@@ -92,9 +92,19 @@ const OtpVerification = () => {
             // Simulate API call
             const response = await verifyOtp(email, otp, dispatch)
             console.log(response, "response after otp submiter");
+            console.log("role",response.data.user.role);
+            
             if (response.status == 200) {
-
-                navigate("/")
+               if(response.data.user.role=='user'){
+                console.log("going to user route");
+                   navigate("/")
+               }else if(response.data.user.role=='organizer'){
+                console.log("going to organiser route");
+                
+                   navigate('/organiser/')
+               }else{
+                  navigate("/admin/")
+               }
             }
 
             if (response == undefined) {
