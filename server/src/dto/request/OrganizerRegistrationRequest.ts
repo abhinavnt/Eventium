@@ -1,3 +1,5 @@
+import { HttpError } from "../../types/HttpError";
+
 export class OrganizerRegistrationRequestDto {
   email: string;
   password: string;
@@ -14,14 +16,14 @@ export class OrganizerRegistrationRequestDto {
   };
 
   constructor(data: any) {
-    if (!data.email || !data.password || !data.name) {
-      throw new Error("Missing required fields");
+    if (!data.data.email || !data.data.password || !data.data.name) {
+      throw new HttpError(400,"Missing required fields")
     }
-    this.email = data.email;
-    this.password = data.password;
+    this.email = data.data.email;
+    this.password = data.data.password;
     this.role="organizer";
-    this.name = data.name;
-    this.organizationName = data.organizationName;
-    this.contactInfo = data.contactInfo;
+    this.name = data.data.name;
+    this.organizationName = data.data.organizationName;
+    this.contactInfo = data.data.contactInfo;
   }
 }
